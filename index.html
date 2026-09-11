@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>臨床實習病毒學期末考試系統</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 頂部導航列 -->
+  <header class="app-header">
+    <div class="brand-section">
+      <span class="brand-badge">臨床實習</span>
+      <div>
+        <div class="brand-title">病毒學期末考試系統</div>
+        <div class="brand-user" id="header-user-info">尚未登入</div>
+      </div>
+    </div>
+
+    <!-- 倒數計時器 (60分鐘，中途不暫停) -->
+    <div class="header-center">
+      <div class="timer-container" id="timer-container" style="display: none;">
+        <svg class="timer-icon" viewBox="0 0 24 24">
+          <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.1.8-1.3-4.5-2.7V7z"/>
+        </svg>
+        <span class="timer-text" id="timer-text">60:00</span>
+        <span class="timer-tag">倒數中</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <!-- 網路連線狀態指示器 (斷網救援) -->
+      <div class="network-status" id="network-badge">
+        <span class="status-dot"></span>
+        <span id="network-text">連線正常</span>
+      </div>
+      <button class="btn btn-danger" id="submit-btn-top" style="display: none;" onclick="App.openSubmitModal()">
+        交卷結算
+      </button>
+    </div>
+  </header>
+
+  <!-- 全域狀態/警告橫幅 -->
+  <div id="global-banner" class="notification-banner" style="display: none;">
+    <span id="banner-text">系統提示</span>
+  </div>
+
+  <main class="main-container">
+
+    <!-- VIEW 1: 考前說明與考生登入 -->
+    <section id="welcome-view" class="welcome-card">
+      <h1 class="welcome-title">臨床實習病毒學 期末檢驗測驗</h1>
+      <p class="welcome-subtitle">專業醫檢實習能力驗證平台</p>
+
+      <div class="rules-grid">
+        <div class="rule-box">
+          <div class="rule-box-title">測驗題數</div>
+          <div class="rule-box-val">80 題</div>
+        </div>
+        <div class="rule-box">
+          <div class="rule-box-title">每題配分</div>
+          <div class="rule-box-val">1.25 分</div>
+        </div>
+        <div class="rule-box">
+          <div class="rule-box-title">測驗限時</div>
+          <div class="rule-box-val">60 分鐘</div>
+        </div>
+        <div class="rule-box">
+          <div class="rule-box-title">測驗滿分</div>
+          <div class="rule-box-val">100 分</div>
+        </div>
+      </div>
+
+      <div class="notice-list">
+        <strong>⚠️ 考試重要注意事項：</strong>
+        <ul>
+          <li><strong>隨機抽選試題</strong>：系統自題庫隨機精選 80 題，全面涵蓋臨床實習各項 SOP 檢驗科目與操作單元。</li>
+          <li><strong>倒數計時不可中斷</strong>：點選開始後即啟動 60 分鐘倒數，時間終止將自動強制交卷。</li>
+          <li><strong>防跳出與斷網救援</strong>：作答選項即時自動儲存於本機；若不慎關閉視窗、瀏覽器崩潰或遭遇斷網，重新打開頁面即可<strong>100% 恢復進度</strong>，請勿驚慌。</li>
+          <li><strong>嚴格防作弊（防截圖扣分）</strong>：考試中<strong>嚴禁複製試題文字與螢幕截圖</strong>。系統全程監控，<strong>每次偵測到螢幕截圖行為，將直接自總成績扣除 5 分</strong>！</li>
+          <li><strong>成績結算保護</strong>：為確保試題公正性，交卷後<strong>僅公佈最終成績</strong>，不提供題目解析與正解。</li>
+          <li><strong>成績上傳</strong>：測驗完成後可一鍵上傳成績至 Google 試算表，並可下載 CSV 備份。</li>
+        </ul>
+      </div>
+
+      <div class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="student-name">考生姓名 *</label>
+          <input type="text" id="student-name" class="form-input" placeholder="請輸入您的繁體中文姓名" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="student-id">學號 / 實習編號 *</label>
+          <input type="text" id="student-id" class="form-input" placeholder="例如：B11000001 或 V-01" required>
+        </div>
+        <button class="btn btn-primary" id="start-exam-btn" style="padding: 0.9rem; font-size: 1.05rem;" onclick="App.startExam()">
+          開始正式考試
+        </button>
+      </div>
+    </section>
+
+    <!-- VIEW 2: 考試進行中畫面 -->
+    <section id="exam-view" class="exam-layout" style="display: none;">
+      <!-- 左側：當前題目卡片 -->
+      <div class="question-card">
+        <div class="question-meta">
+          <div class="meta-tags">
+            <span class="badge badge-subject" id="q-subject-badge">科目: 92</span>
+            <span class="badge badge-scope" id="q-scope-badge">檢驗原理</span>
+          </div>
+          <button class="bookmark-btn" id="bookmark-btn" onclick="App.toggleBookmark()">
+            ☆ 標記此題
+          </button>
+        </div>
+
+        <div style="color: var(--gray-500); font-weight: 600; font-size: 0.9rem;" id="q-num-display">
+          第 1 題 / 共 80 題
+        </div>
+
+        <div class="question-text" id="q-text">
+          題目載入中...
+        </div>
+
+        <!-- 考題附圖容器 (未來圖片考題預留空間，無圖時自動隱藏不佔位) -->
+        <div class="question-image-container" id="q-image-container" style="display: none;">
+          <div class="image-wrapper">
+            <img id="q-image" src="" alt="考題附圖" onclick="App.openImageModal(this.src)" title="點擊放大圖片">
+            <div class="image-hint">🔍 點擊圖片可放大全螢幕檢視</div>
+          </div>
+        </div>
+
+        <!-- 四選一選項列表 -->
+        <div class="options-list" id="options-container">
+          <!-- 選項由 JS 動態生成 -->
+        </div>
+
+        <!-- 導航底部按鈕 -->
+        <div class="question-footer">
+          <button class="btn btn-outline" id="prev-q-btn" onclick="App.navigateQuestion(-1)">
+            ← 上一題
+          </button>
+          <div style="font-size: 0.85rem; color: var(--gray-500);">
+            可用鍵盤 1~4 或 A~D 選項，左右鍵切換題目
+          </div>
+          <button class="btn btn-primary" id="next-q-btn" onclick="App.navigateQuestion(1)">
+            下一題 →
+          </button>
+        </div>
+      </div>
+
+      <!-- 右側：題號總覽盤與進度條 -->
+      <aside class="sidebar-panel">
+        <div class="sidebar-header">
+          <span class="sidebar-title">題號導航盤</span>
+          <span class="badge badge-subject">80 題</span>
+        </div>
+
+        <div class="progress-summary" id="progress-text">0 / 80 題已完成 (0%)</div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
+        </div>
+
+        <div class="question-grid" id="question-grid">
+          <!-- 1 ~ 80 題格由 JS 生成 -->
+        </div>
+
+        <div class="legend">
+          <div class="legend-item"><span class="legend-box ans"></span>已作答</div>
+          <div class="legend-item"><span class="legend-box unans"></span>未作答</div>
+          <div class="legend-item"><span class="legend-box flag"></span>已標記</div>
+        </div>
+
+        <button class="btn btn-danger" style="width: 100%; margin-top: 1.25rem; padding: 0.75rem;" onclick="App.openSubmitModal()">
+          確認交卷結算
+        </button>
+      </aside>
+    </section>
+
+    <!-- VIEW 3: 成績結算頁 (Requirement 4: 結束後只顯示成績) -->
+    <section id="result-view" class="result-card" style="display: none;">
+      <div class="result-icon-wrap">✓</div>
+      <h2 class="result-title">考試已順利完成！</h2>
+      <p class="result-subtitle">作答紀錄已由系統安全密封結算</p>
+
+      <div class="score-display-box">
+        <div class="score-number" id="res-score-num">--</div>
+        <div class="score-max">/ 滿分 100 分</div>
+      </div>
+
+      <div class="result-stats-grid">
+        <div class="stat-box">
+          <div class="stat-lbl">考生姓名</div>
+          <div class="stat-val" id="res-name">--</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-lbl">學號 / 編號</div>
+          <div class="stat-val" id="res-id">--</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-lbl">答對題數 (每題 1.25 分)</div>
+          <div class="stat-val" id="res-correct">-- / 80 題</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-lbl">測驗耗時</div>
+          <div class="stat-val" id="res-time-spent">-- 分 -- 秒</div>
+        </div>
+        <div class="stat-box" id="res-penalty-box" style="display: none; border-color: #fca5a5; background: #fef2f2;">
+          <div class="stat-lbl" style="color: #b91c1c; font-weight: 600;">⚠️ 截圖違規扣分</div>
+          <div class="stat-val" id="res-penalty-val" style="color: #b91c1c;">-0 分</div>
+        </div>
+      </div>
+
+      <div style="font-size: 0.85rem; color: var(--gray-500); margin-bottom: 1.5rem;">
+        交卷時間：<span id="res-submit-time">--</span>
+      </div>
+
+      <!-- Google 試算表上傳區 (Requirement 6) -->
+      <div class="upload-section">
+        <div class="upload-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+          </svg>
+          <span>成績上傳至 Google 試算表</span>
+        </div>
+        <p class="upload-desc">系統支援透過 Google Apps Script 將考試成績即時寫入指定 Google Sheet 紀錄表。</p>
+        
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <input type="url" id="gas-url-input" class="form-input" placeholder="請填入 Google Apps Script 網頁應用程式 URL" style="font-size: 0.85rem; padding: 0.6rem;">
+        </div>
+        
+        <button class="btn btn-primary" id="upload-gas-btn" style="width: 100%;" onclick="App.uploadToGoogleSheet()">
+          一鍵上傳成績至 Google 試算表
+        </button>
+
+        <div id="upload-status-box" class="upload-status"></div>
+      </div>
+
+      <!-- 備份與防偽 -->
+      <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+        <button class="btn btn-outline" onclick="App.downloadCSV()">
+          📥 下載成績證明 (CSV)
+        </button>
+        <button class="btn btn-outline" onclick="App.copyCertificateToken()">
+          📋 複製成績驗證代碼
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 違規截圖警告彈窗 (Modal) -->
+  <div class="modal-overlay" id="violation-modal">
+    <div class="modal-card" style="border: 2px solid #ef4444;">
+      <div style="font-size: 3rem; margin-bottom: 0.5rem;">⚠️</div>
+      <h3 class="modal-title" style="color: #b91c1c;">違規警告：偵測到螢幕截圖！</h3>
+      <div class="modal-desc" id="violation-desc">
+        系統偵測到螢幕截圖操作。<br>
+        依考試嚴格防舞弊規範：<strong style="color: #b91c1c; font-size: 1.15rem;">本次總成績已直接扣除 5 分！</strong><br>
+        <span id="violation-stat" style="display:block; margin-top: 0.75rem; font-weight: 600; color: #dc2626;"></span>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" onclick="App.closeViolationModal()">我已知悉並返回作答</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 交卷確認彈窗 (Modal) -->
+  <div class="modal-overlay" id="submit-modal">
+    <div class="modal-card">
+      <h3 class="modal-title" id="modal-title">確認交卷？</h3>
+      <div class="modal-desc" id="modal-desc">
+        您已作答完成，確定要現在交卷並結算成績嗎？
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="App.closeSubmitModal()">繼續檢查作答</button>
+        <button class="btn btn-danger" onclick="App.submitExam(false)">確認交卷</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 圖片放大檢視彈窗 (Modal) -->
+  <div class="modal-overlay image-modal-overlay" id="image-modal" onclick="App.closeImageModal()">
+    <div class="image-modal-card" onclick="event.stopPropagation()">
+      <button class="image-modal-close" onclick="App.closeImageModal()">&times;</button>
+      <img id="modal-image-preview" src="" alt="圖片大圖檢視">
+    </div>
+  </div>
+
+  <script src="questions_db.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
