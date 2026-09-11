@@ -74,6 +74,8 @@ const StaticEngine = {
 
 const STORAGE_KEY = 'virology_exam_backup_v1';
 const GAS_URL_KEY = 'virology_gas_url';
+// 內建 Google 試算表自動登記 Web App 網址
+const BUILTIN_GAS_URL = 'https://script.google.com/macros/s/AKfycbwoj5lW2cRhjEgHhQKvW5oriybBFCDUw5HsnrrLQtgEcJw5UTs-a6iNyJG1R9UFIxXz/exec';
 
 const App = {
   state: {
@@ -100,13 +102,6 @@ const App = {
     this.bindKeyboardEvents();
     this.bindAntiCheating();
     this.checkExistingExam();
-    
-    // 預載先前儲存的 GAS URL
-    const savedGasUrl = localStorage.getItem(GAS_URL_KEY) || '';
-    const gasInput = document.getElementById('gas-url-input');
-    if (gasInput && savedGasUrl) {
-      gasInput.value = savedGasUrl;
-    }
   },
 
   // --- 監聽網路連線狀態 (斷網救援) ---
@@ -786,29 +781,25 @@ const App = {
     // 清理考題備份，標記為已完成
     localStorage.removeItem(STORAGE_KEY);
 
-    // 嘗試自動上傳至 Google Sheet (若已設定 URL)
-    const gasInput = document.getElementById('gas-url-input');
-    if (gasInput && gasInput.value.trim()) {
-      this.uploadToGoogleSheet();
-    }
+    // 內建自動上傳至指導老師 Google 試算表 (學生免手動輸入)
+    this.uploadToGoogleSheet();
   },
 
-  // --- 上傳成績至 Google Sheet ---
+  // --- 上傳成績至 Google Sheet (內建自動登記) ---
   async uploadToGoogleSheet() {
-    const input = document.getElementById('gas-url-input');
-    const url = input ? input.value.trim() : '';
+    const url = BUILTIN_GAS_URL;
     const statusBox = document.getElementById('upload-status-box');
-
-    if (!url) {
-      alert('請先填入 Google Apps Script 網路應用程式 URL！\n若您尚未設定，請參考頁面下方設定指引。');
-      return;
-    }
-
-    localStorage.setItem(GAS_URL_KEY, url);
-
     const btn = document.getElementById('upload-gas-btn');
-    btn.disabled = true;
-    btn.innerText = '正在上傳成績至 Google 試算表...';
+
+    if (statusBox) {
+      statusBox.style.display = 'block';
+      statusBox.className = 'upload-status info';
+      statusBox.innerText = '⏳ 正在自動同步成績至 Google 試算表...';
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = '正在同步中...';
+    }
 
     const penalty = this.state.scoreResult?.penalty_points ?? this.state.penaltyPoints ?? 0;
     const violations = this.state.scoreResult?.screenshot_violations ?? this.state.screenshotViolations ?? 0;
@@ -830,7 +821,7 @@ const App = {
     };
 
     try {
-      // 透過後端 Proxy 上傳（解決瀏覽器跨網域 CORS 問題）
+      // 1. 優先嘗試透過後端 Proxy 上傳（本機模式）
       const resp = await fetch('/api/upload_score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -839,30 +830,40 @@ const App = {
 
       const resData = await resp.json();
       if (resData.success) {
-        statusBox.className = 'upload-status success';
-        statusBox.innerText = `✅ 成績上傳成功！已順利記錄至 Google 試算表 (${new Date().toLocaleTimeString()})`;
+        if (statusBox) {
+          statusBox.className = 'upload-status success';
+          statusBox.innerText = `✅ 成績已成功自動登記至指導老師試算表！(${new Date().toLocaleTimeString('zh-TW')})`;
+        }
+        if (btn) btn.style.display = 'none';
+        return;
       } else {
-        throw new Error(resData.message || '上傳失敗');
+        throw new Error(resData.message || '後端回報上傳失敗');
       }
     } catch (e) {
-      console.warn('後端代理失敗，嘗試前端直連發送...', e);
+      // 2. 後端不可用時 (如 GitHub Pages 靜態環境)，採用前端直連 (mode: no-cors)
       try {
-        // 前端直連嘗試 (mode: no-cors)
         await fetch(url, {
           method: 'POST',
           mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
-        statusBox.className = 'upload-status success';
-        statusBox.innerText = `✅ 成績資料已成功發送至 Google Apps Script！(${new Date().toLocaleTimeString()})`;
+        if (statusBox) {
+          statusBox.className = 'upload-status success';
+          statusBox.innerText = `✅ 成績已成功自動登記至指導老師試算表！(${new Date().toLocaleTimeString('zh-TW')})`;
+        }
+        if (btn) btn.style.display = 'none';
       } catch (err) {
-        statusBox.className = 'upload-status error';
-        statusBox.innerText = `❌ 上傳遭遇問題：${err.message}。請下載 CSV 成績證明作為備份。`;
+        if (statusBox) {
+          statusBox.className = 'upload-status error';
+          statusBox.innerText = `⚠️ 雲端自動登記暫時遭遇網路連線問題。請點選下方下載 CSV 成績單存證，或稍後手動重試。`;
+        }
+        if (btn) {
+          btn.style.display = 'inline-block';
+          btn.disabled = false;
+          btn.innerText = '🔄 重新嘗試同步至試算表';
+        }
       }
-    } finally {
-      btn.disabled = false;
-      btn.innerText = '一鍵上傳成績至 Google 試算表';
     }
   },
 

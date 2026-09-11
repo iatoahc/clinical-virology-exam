@@ -214,25 +214,23 @@
         交卷時間：<span id="res-submit-time">--</span>
       </div>
 
-      <!-- Google 試算表上傳區 (Requirement 6) -->
+      <!-- Google 試算表自動登記區 -->
       <div class="upload-section">
         <div class="upload-header">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
           </svg>
-          <span>成績上傳至 Google 試算表</span>
+          <span>雲端成績自動登記</span>
         </div>
-        <p class="upload-desc">系統支援透過 Google Apps Script 將考試成績即時寫入指定 Google Sheet 紀錄表。</p>
+        <p class="upload-desc">成績已由系統自動加密同步至指導老師 Google 試算表，無須考生手動輸入。</p>
         
-        <div class="form-group" style="margin-bottom: 0.75rem;">
-          <input type="url" id="gas-url-input" class="form-input" placeholder="請填入 Google Apps Script 網頁應用程式 URL" style="font-size: 0.85rem; padding: 0.6rem;">
+        <div id="upload-status-box" class="upload-status info" style="display: block;">
+          ⏳ 正在自動同步成績至 Google 試算表...
         </div>
-        
-        <button class="btn btn-primary" id="upload-gas-btn" style="width: 100%;" onclick="App.uploadToGoogleSheet()">
-          一鍵上傳成績至 Google 試算表
-        </button>
 
-        <div id="upload-status-box" class="upload-status"></div>
+        <button class="btn btn-outline" id="upload-gas-btn" style="width: 100%; margin-top: 0.5rem; display: none;" onclick="App.uploadToGoogleSheet()">
+          🔄 重新同步成績至 Google 試算表
+        </button>
       </div>
 
       <!-- 備份與防偽 -->
